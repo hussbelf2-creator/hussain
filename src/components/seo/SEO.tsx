@@ -79,6 +79,15 @@ export default function SEO({
     setMetaTag("property", "og:description", metaDescription);
     setMetaTag("property", "og:url", canonicalUrl);
     setMetaTag("property", "og:image", metaImage);
+    setMetaTag("property", "og:image:secure_url", metaImage);
+    setMetaTag(
+      "property",
+      "og:image:type",
+      metaImage.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg"
+    );
+    setMetaTag("property", "og:image:width", "1024");
+    setMetaTag("property", "og:image:height", "1024");
+    setMetaTag("property", "og:image:alt", formattedTitle);
     setMetaTag("property", "og:locale", SITE_DEFAULTS.locale);
 
     if (publishedTime) {
@@ -93,9 +102,11 @@ export default function SEO({
 
     // 4. Twitter Cards
     setMetaTag("name", "twitter:card", "summary_large_image");
+    setMetaTag("name", "twitter:url", canonicalUrl);
     setMetaTag("name", "twitter:title", formattedTitle);
     setMetaTag("name", "twitter:description", metaDescription);
     setMetaTag("name", "twitter:image", metaImage);
+    setMetaTag("name", "twitter:image:alt", formattedTitle);
     setMetaTag("name", "twitter:creator", SITE_DEFAULTS.twitterHandle);
 
     // 5. JSON-LD Structured Data Schema

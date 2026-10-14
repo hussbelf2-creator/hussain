@@ -30,8 +30,7 @@ export const SITE_DEFAULTS = {
     "تصوير منتجات AI",
     "هندسة برومبتات",
   ],
-  defaultImage:
-    "https://static.readdy.ai/image/8d67d4b5b60a62e7b1df4167f7b5245a/063058724ec35e84d75517ddfc59765d.png",
+  defaultImage: "https://hassanalil.com/me.jpg",
   locale: "ar_SA",
   twitterHandle: "@hassan_ai",
 };
@@ -55,7 +54,8 @@ export function getFullImageUrl(imageUrl?: string): string {
   if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
     return imageUrl;
   }
-  return `${SITE_DEFAULTS.siteUrl}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
+  const cleanPath = imageUrl.startsWith("/") ? imageUrl.slice(1) : imageUrl;
+  return `${SITE_DEFAULTS.siteUrl}/${cleanPath}`;
 }
 
 /**
