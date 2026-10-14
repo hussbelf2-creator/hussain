@@ -22,12 +22,6 @@ interface Testimonial {
   rating: number;
 }
 
-const serviceIdMap: Record<number, string> = {
-  1: "ai-product-photography",
-  2: "ai-film-concept",
-  3: "consultation",
-};
-
 const ServicesSection = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -104,10 +98,10 @@ const ServicesSection = () => {
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mb-16">
-          {services.map((service, idx) => (
+          {services.map((service) => (
             <Link
               key={service.id}
-              to={`/services/${serviceIdMap[idx + 1] || service.id}`}
+              to={`/services/${service.id}`}
               className="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-400/40 rounded-xl p-5 transition-all duration-300 cursor-pointer block"
             >
               <div className="w-10 h-10 bg-blue-600/20 border border-blue-500/30 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-600/30 transition-colors duration-300">
@@ -118,7 +112,9 @@ const ServicesSection = () => {
               <p className="text-white/60 text-sm leading-relaxed mb-4">{service.description}</p>
 
               <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                <span className="text-blue-400 font-bold text-sm">{service.price}</span>
+                <span className="text-blue-400 font-bold text-sm">
+                  {texts.hidden_price_ids?.includes(service.id) ? "حسب الطلب" : (service.price || "اتصل بنا")}
+                </span>
                 <span className="text-white/40 group-hover:text-white text-sm flex items-center gap-1 transition-colors whitespace-nowrap">
                   تفاصيل
                   <div className="w-4 h-4 flex items-center justify-center">

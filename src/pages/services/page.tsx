@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/pages/home/components/Navbar";
 import FooterSection from "@/pages/home/components/FooterSection";
 import { supabase } from "@/lib/supabase";
+import { defaultHomeSections, mergeHomeSections, type ServicesTexts } from "@/lib/homeSections";
 
 interface Service {
   id: string;
@@ -18,6 +19,7 @@ interface Service {
 const ServicesPage = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
+  const [servicesTexts, setServicesTexts] = useState<ServicesTexts>(defaultHomeSections.services);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<{ value: string; label: string; icon: string }[]>([]);
   const [sectionEnabled, setSectionEnabled] = useState(true);
@@ -28,57 +30,48 @@ const ServicesPage = () => {
   );
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("show_services")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setSectionEnabled(data.show_services !== false);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
-  }, []);
-
-  useEffect(() => {
-    async function load() {
+    async function loadData() {
       try {
-        const { data: svcData } = await supabase
-          .from("services")
-          .select("*")
-          .order("order_index", { ascending: true });
+        const [servicesRes, settingsRes] = await Promise.all([
+          supabase
+            .from("services")
+            .select("*")
+            .order("order_index", { ascending: true }),
+          supabase
+            .from("site_settings")
+            .select("show_services, home_stats, home_sections, whatsapp_number, whatsapp_consultation_message")
+            .eq("id", 1)
+            .maybeSingle(),
+        ]);
 
-        setServices(svcData || []);
+        if (servicesRes.data) {
+          setServices(servicesRes.data);
+        }
 
-        const { data: statsData } = await supabase
-          .from("site_settings")
-          .select("home_stats")
-          .eq("id", 1)
-          .maybeSingle();
-
-        if (statsData?.home_stats && Array.isArray(statsData.home_stats) && statsData.home_stats.length > 0) {
-          setStats(statsData.home_stats as { value: string; label: string; icon: string }[]);
+        if (settingsRes.data) {
+          const s = settingsRes.data;
+          if (s.show_services !== undefined && s.show_services !== null) {
+            setSectionEnabled(s.show_services !== false);
+          }
+          if (s.whatsapp_number) setWhatsappNumber(s.whatsapp_number);
+          if (s.whatsapp_consultation_message) setConsultationMessage(s.whatsapp_consultation_message);
+          if (s.home_stats && Array.isArray(s.home_stats) && s.home_stats.length > 0) {
+            setStats(s.home_stats as { value: string; label: string; icon: string }[]);
+          }
+          if (s.home_sections) {
+            const merged = mergeHomeSections(s.home_sections);
+            setServicesTexts(merged.services);
+          }
         }
       } catch {
         // keep defaults
       } finally {
         setLoading(false);
+        setChecking(false);
       }
     }
-    load();
-  }, []);
 
-  useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("whatsapp_number, whatsapp_consultation_message")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.whatsapp_number) setWhatsappNumber(data.whatsapp_number);
-        if (data?.whatsapp_consultation_message) setConsultationMessage(data.whatsapp_consultation_message);
-      })
-      .catch(() => {});
+    loadData();
   }, []);
 
   const processSteps = [
@@ -89,8 +82,11 @@ const ServicesPage = () => {
   ];
 
   const defaultIcon = "ri-customer-service-2-line";
-
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(consultationMessage)}`;
+
+  const pageBadge = servicesTexts.page_badge || defaultHomeSections.services.page_badge || "الباقات والأسعار";
+  const pageTitle = servicesTexts.page_title || defaultHomeSections.services.page_title || "جميع الخدمات";
+  const hiddenPriceIds = servicesTexts.hidden_price_ids || [];
 
   if (checking) {
     return (
@@ -186,10 +182,10 @@ const ServicesPage = () => {
           <div className="text-center mb-10">
             <div className="flex items-center justify-center gap-2 mb-3">
               <div className="w-6 h-0.5 bg-blue-400"></div>
-              <span className="text-blue-400 text-xs font-semibold tracking-wider uppercase">الباقات والأسعار</span>
+              <span className="text-blue-400 text-xs font-semibold tracking-wider uppercase">{pageBadge}</span>
               <div className="w-6 h-0.5 bg-blue-400"></div>
             </div>
-            <h2 className="text-xl md:text-2xl font-black text-white mb-2">جميع الخدمات</h2>
+            <h2 className="text-xl md:text-2xl font-black text-white mb-2">{pageTitle}</h2>
             <p className="text-white/50 text-xs max-w-lg mx-auto">{services.length} خدمة متاحة</p>
           </div>
 
@@ -206,57 +202,62 @@ const ServicesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {services.map((service) => (
-                <div
-                  key={service.id}
-                  className="group bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/20 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
-                  onClick={() => navigate(`/services/${service.id}`)}
-                >
-                  <div className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center">
-                        <i className={`${service.icon || defaultIcon} text-blue-400 text-lg`}></i>
-                      </div>
-                      <div>
-                        <h3 className="text-white font-bold text-base">{service.title}</h3>
-                        {service.price && (
-                          <span className="text-blue-400 text-xs font-semibold">{service.price}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-white/50 text-sm leading-relaxed mb-4 line-clamp-2">
-                      {service.description || "—"}
-                    </p>
-
-                    {service.features && service.features.length > 0 && (
-                      <div className="space-y-2 mb-5">
-                        {service.features.slice(0, 4).map((f, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-                              <i className="ri-check-line text-emerald-400 text-xs"></i>
-                            </div>
-                            <span className="text-white/50 text-xs">{f}</span>
-                          </div>
-                        ))}
-                        {service.features.length > 4 && (
-                          <p className="text-white/30 text-xs pr-6">+{service.features.length - 4} ميزات إضافية</p>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                      <span className="text-white font-bold text-sm">{service.price || "اتصل بنا"}</span>
-                      <span className="text-white/40 group-hover:text-white text-sm flex items-center gap-1 transition-colors whitespace-nowrap">
-                        التفاصيل
-                        <div className="w-4 h-4 flex items-center justify-center">
-                          <i className="ri-arrow-left-line text-xs"></i>
+              {services.map((service) => {
+                const isPriceHidden = hiddenPriceIds.includes(service.id);
+                return (
+                  <div
+                    key={service.id}
+                    className="group bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/20 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
+                    onClick={() => navigate(`/services/${service.id}`)}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center">
+                          <i className={`${service.icon || defaultIcon} text-blue-400 text-lg`}></i>
                         </div>
-                      </span>
+                        <div>
+                          <h3 className="text-white font-bold text-base">{service.title}</h3>
+                          {!isPriceHidden && service.price && (
+                            <span className="text-blue-400 text-xs font-semibold">{service.price}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-white/50 text-sm leading-relaxed mb-4 line-clamp-2">
+                        {service.description || "—"}
+                      </p>
+
+                      {service.features && service.features.length > 0 && (
+                        <div className="space-y-2 mb-5">
+                          {service.features.slice(0, 4).map((f, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                <i className="ri-check-line text-emerald-400 text-xs"></i>
+                              </div>
+                              <span className="text-white/50 text-xs">{f}</span>
+                            </div>
+                          ))}
+                          {service.features.length > 4 && (
+                            <p className="text-white/30 text-xs pr-6">+{service.features.length - 4} ميزات إضافية</p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <span className="text-white font-bold text-sm">
+                          {isPriceHidden ? "حسب الطلب" : (service.price || "اتصل بنا")}
+                        </span>
+                        <span className="text-white/40 group-hover:text-white text-sm flex items-center gap-1 transition-colors whitespace-nowrap">
+                          التفاصيل
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            <i className="ri-arrow-left-line text-xs"></i>
+                          </div>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

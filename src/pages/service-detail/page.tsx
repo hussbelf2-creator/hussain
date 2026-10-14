@@ -31,16 +31,54 @@ const ServiceDetailPage = () => {
     "مرحباً حسن، أرغب بحجز استشارة مجانية لمناقشة مشروعي."
   );
 
+  const [hiddenPriceIds, setHiddenPriceIds] = useState<string[]>([]);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const { data } = await supabase
-          .from("services")
-          .select("*")
-          .eq("id", id)
-          .maybeSingle();
-        setService(data);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "");
+
+        const fetchService = async () => {
+          if (isUuid) {
+            const { data } = await supabase.from("services").select("*").eq("id", id).maybeSingle();
+            return data;
+          }
+
+          // Fallback for legacy slug URLs (e.g. ai-product-photography, ai-film-concept, consultation)
+          const slugOrderMap: Record<string, number> = {
+            "ai-product-photography": 1,
+            "ai-film-concept": 2,
+            "consultation": 3,
+          };
+          const targetIndex = id ? slugOrderMap[id] : undefined;
+          const { data: allServices } = await supabase
+            .from("services")
+            .select("*")
+            .order("order_index", { ascending: true });
+
+          if (!allServices || allServices.length === 0) return null;
+          if (targetIndex !== undefined && allServices[targetIndex - 1]) {
+            return allServices[targetIndex - 1];
+          }
+          return allServices[0] || null;
+        };
+
+        const [serviceData, settingsRes] = await Promise.all([
+          fetchService(),
+          supabase.from("site_settings").select("whatsapp_number, whatsapp_consultation_message, home_sections").eq("id", 1).maybeSingle(),
+        ]);
+
+        if (serviceData) {
+          setService(serviceData);
+        }
+
+        if (settingsRes.data) {
+          if (settingsRes.data.whatsapp_number) setWhatsappNumber(settingsRes.data.whatsapp_number);
+          if (settingsRes.data.whatsapp_consultation_message) setConsultationMessage(settingsRes.data.whatsapp_consultation_message);
+          const hidden = settingsRes.data.home_sections?.services?.hidden_price_ids;
+          if (Array.isArray(hidden)) setHiddenPriceIds(hidden);
+        }
       } catch {
         // not found
       } finally {
@@ -49,19 +87,6 @@ const ServiceDetailPage = () => {
     }
     if (id) load();
   }, [id]);
-
-  useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("whatsapp_number, whatsapp_consultation_message")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.whatsapp_number) setWhatsappNumber(data.whatsapp_number);
-        if (data?.whatsapp_consultation_message) setConsultationMessage(data.whatsapp_consultation_message);
-      })
-      .catch(() => {});
-  }, []);
 
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(consultationMessage)}`;
 
@@ -133,7 +158,9 @@ const ServiceDetailPage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center">
-              <div className="text-2xl font-black text-white">{service.price || "—"}</div>
+              <div className="text-2xl font-black text-white">
+                {hiddenPriceIds.includes(service.id) ? "حسب الطلب" : (service.price || "—")}
+              </div>
               <div className="text-white/50 text-xs mt-1">السعر</div>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center">

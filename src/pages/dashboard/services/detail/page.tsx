@@ -23,6 +23,7 @@ const DashboardServiceDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [service, setService] = useState<Service | null>(null);
+  const [hiddenPriceIds, setHiddenPriceIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -31,13 +32,16 @@ const DashboardServiceDetailPage = () => {
       setLoading(true);
       setError("");
       try {
-        const { data, error: fetchError } = await supabase
-          .from("services")
-          .select("*")
-          .eq("id", id)
-          .maybeSingle();
-        if (fetchError) throw fetchError;
-        setService(data);
+        const [svcRes, settingsRes] = await Promise.all([
+          supabase.from("services").select("*").eq("id", id).maybeSingle(),
+          supabase.from("site_settings").select("home_sections").eq("id", 1).maybeSingle(),
+        ]);
+
+        if (svcRes.error) throw svcRes.error;
+        setService(svcRes.data);
+
+        const hidden = settingsRes.data?.home_sections?.services?.hidden_price_ids;
+        if (Array.isArray(hidden)) setHiddenPriceIds(hidden);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "فشل تحميل البيانات");
       } finally {
@@ -46,6 +50,8 @@ const DashboardServiceDetailPage = () => {
     }
     if (id) load();
   }, [id]);
+
+  const isPriceHidden = service ? hiddenPriceIds.includes(service.id) : false;
 
   return (
     <DashboardLayout>
@@ -87,7 +93,15 @@ const DashboardServiceDetailPage = () => {
                 <h1 className="text-xl md:text-2xl font-black text-white">{service.title}</h1>
                 <div className="flex items-center gap-3 mt-1">
                   <span className="text-white/40 text-sm">#{service.order_index ?? 0}</span>
-                  {service.price && <span className="bg-blue-600/20 text-blue-400 text-xs px-2.5 py-1 rounded-full font-medium">{service.price}</span>}
+                  {service.price && (
+                    <span className="bg-blue-600/20 text-blue-400 text-xs px-2.5 py-1 rounded-full font-medium">
+                      {service.price}
+                    </span>
+                  )}
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1 ${isPriceHidden ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+                    <i className={isPriceHidden ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                    {isPriceHidden ? "السعر مخفي في الموقع" : "السعر معروض في الموقع"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -99,7 +113,10 @@ const DashboardServiceDetailPage = () => {
               </div>
               <div className="bg-blue-600/20 rounded-xl p-4 text-center">
                 <div className="text-lg font-black text-blue-400">{service.price || "—"}</div>
-                <div className="text-xs text-white/40 mt-1">السعر</div>
+                <div className="text-xs text-white/40 mt-1 flex items-center justify-center gap-1">
+                  <span>السعر</span>
+                  <span>({isPriceHidden ? "مخفي" : "معروض"})</span>
+                </div>
               </div>
               <div className="bg-emerald-500/20 rounded-xl p-4 text-center">
                 <div className="text-lg font-black text-emerald-400">#{service.order_index ?? 0}</div>

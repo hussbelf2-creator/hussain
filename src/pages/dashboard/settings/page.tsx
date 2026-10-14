@@ -616,11 +616,31 @@ const DashboardSettingsPage = () => {
               </h4>
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>العنوان</label>
+                  <label className={labelClass}>شارة صفحة الخدمات (النص الصغير العلوي)</label>
+                  <input
+                    type="text"
+                    value={form.home_sections.services.page_badge ?? "الباقات والأسعار"}
+                    onChange={(e) => updateHomeSection("services", "page_badge", e.target.value)}
+                    placeholder="الباقات والأسعار"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>عنوان صفحة الخدمات الرئيسي</label>
+                  <input
+                    type="text"
+                    value={form.home_sections.services.page_title ?? "جميع الخدمات"}
+                    onChange={(e) => updateHomeSection("services", "page_title", e.target.value)}
+                    placeholder="جميع الخدمات"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>عنوان قسم الخدمات في الصفحة الرئيسية</label>
                   <input type="text" value={form.home_sections.services.title} onChange={(e) => updateHomeSection("services", "title", e.target.value)} className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass}>الوصف</label>
+                  <label className={labelClass}>وصف قسم الخدمات في الصفحة الرئيسية</label>
                   <input type="text" value={form.home_sections.services.subtitle} onChange={(e) => updateHomeSection("services", "subtitle", e.target.value)} className={inputClass} />
                 </div>
               </div>

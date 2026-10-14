@@ -10,6 +10,9 @@ export interface ServicesTexts {
   subtitle: string;
   testimonials_title: string;
   testimonials_subtitle: string;
+  page_badge?: string;
+  page_title?: string;
+  hidden_price_ids?: string[];
 }
 
 export interface PromptsTexts {
@@ -66,6 +69,9 @@ export const defaultHomeSections: HomeSections = {
     subtitle: "خدمات متكاملة في الإنتاج البصري بالذكاء الاصطناعي",
     testimonials_title: "ماذا يقول العملاء",
     testimonials_subtitle: "آراء حقيقية من عملاء حقيقيين",
+    page_badge: "الباقات والأسعار",
+    page_title: "جميع الخدمات",
+    hidden_price_ids: [],
   },
   prompts: {
     badge: "أداة مجانية",
@@ -92,7 +98,15 @@ export function mergeHomeSections(data: Partial<HomeSections> | null | undefined
   return {
     clients: { ...defaultHomeSections.clients, ...(data?.clients || {}) },
     portfolio: { ...defaultHomeSections.portfolio, ...(data?.portfolio || {}) },
-    services: { ...defaultHomeSections.services, ...(data?.services || {}) },
+    services: {
+      ...defaultHomeSections.services,
+      ...(data?.services || {}),
+      page_badge: data?.services?.page_badge ?? defaultHomeSections.services.page_badge,
+      page_title: data?.services?.page_title ?? defaultHomeSections.services.page_title,
+      hidden_price_ids: Array.isArray(data?.services?.hidden_price_ids)
+        ? data.services.hidden_price_ids
+        : defaultHomeSections.services.hidden_price_ids,
+    },
     prompts: { ...defaultHomeSections.prompts, ...(data?.prompts || {}) },
     books: { ...defaultHomeSections.books, ...(data?.books || {}) },
     blog: { ...defaultHomeSections.blog, ...(data?.blog || {}) },

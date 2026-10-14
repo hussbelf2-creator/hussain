@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 import { showToast } from "@/components/base/Toast";
+import { defaultHomeSections, mergeHomeSections } from "@/lib/homeSections";
 
 interface Service {
   id: string;
@@ -27,6 +28,7 @@ interface ServiceForm {
   description: string;
   icon: string;
   price: string;
+  show_price: boolean;
   features: string;
   order_index: number;
   status: string;
@@ -43,6 +45,7 @@ const emptyForm: ServiceForm = {
   description: "",
   icon: "ri-camera-line",
   price: "",
+  show_price: true,
   features: "",
   order_index: 0,
   status: "نشط",
@@ -70,6 +73,33 @@ const DashboardServicesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
+
+  // Page header texts & price visibility settings
+  const [pageBadge, setPageBadge] = useState("الباقات والأسعار");
+  const [pageTitle, setPageTitle] = useState("جميع الخدمات");
+  const [hiddenPriceIds, setHiddenPriceIds] = useState<string[]>([]);
+  const [showHeaderSettings, setShowHeaderSettings] = useState(false);
+  const [savingHeaders, setSavingHeaders] = useState(false);
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("home_sections")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (data?.home_sections) {
+        const merged = mergeHomeSections(data.home_sections);
+        const svc = merged.services;
+        if (svc.page_badge) setPageBadge(svc.page_badge);
+        if (svc.page_title) setPageTitle(svc.page_title);
+        if (Array.isArray(svc.hidden_price_ids)) setHiddenPriceIds(svc.hidden_price_ids);
+      }
+    } catch {
+      // Keep defaults
+    }
+  }, []);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -101,7 +131,88 @@ const DashboardServicesPage = () => {
 
   useEffect(() => {
     fetchServices();
-  }, [fetchServices]);
+    fetchSettings();
+  }, [fetchServices, fetchSettings]);
+
+  const syncHiddenPriceIds = async (newIds: string[]) => {
+    try {
+      setHiddenPriceIds(newIds);
+      const { data: currentSettings } = await supabase
+        .from("site_settings")
+        .select("home_sections")
+        .eq("id", 1)
+        .maybeSingle();
+
+      const merged = mergeHomeSections(currentSettings?.home_sections);
+      const updatedSections = {
+        ...merged,
+        services: {
+          ...merged.services,
+          hidden_price_ids: newIds,
+        },
+      };
+
+      await supabase
+        .from("site_settings")
+        .update({
+          home_sections: updatedSections,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", 1);
+    } catch {
+      showToast("فشل تحديث إعدادات عرض السعر", "error");
+    }
+  };
+
+  const togglePriceVisibility = async (serviceId: string) => {
+    const isCurrentlyHidden = hiddenPriceIds.includes(serviceId);
+    const updated = isCurrentlyHidden
+      ? hiddenPriceIds.filter((id) => id !== serviceId)
+      : [...hiddenPriceIds, serviceId];
+
+    await syncHiddenPriceIds(updated);
+    showToast(
+      isCurrentlyHidden ? "تم تفعيل إظهار السعر في الموقع" : "تم إخفاء السعر من الموقع",
+      "success"
+    );
+  };
+
+  const handleSaveHeaders = async () => {
+    setSavingHeaders(true);
+    try {
+      const { data: currentSettings } = await supabase
+        .from("site_settings")
+        .select("home_sections")
+        .eq("id", 1)
+        .maybeSingle();
+
+      const merged = mergeHomeSections(currentSettings?.home_sections);
+      const updatedSections = {
+        ...merged,
+        services: {
+          ...merged.services,
+          page_badge: pageBadge.trim() || defaultHomeSections.services.page_badge,
+          page_title: pageTitle.trim() || defaultHomeSections.services.page_title,
+        },
+      };
+
+      const { error: saveErr } = await supabase
+        .from("site_settings")
+        .update({
+          home_sections: updatedSections,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", 1);
+
+      if (saveErr) throw saveErr;
+      showToast("تم حفظ عناوين قسم الخدمات بنجاح", "success");
+      setShowHeaderSettings(false);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "فشل حفظ العناوين", "error");
+    } finally {
+      setSavingHeaders(false);
+    }
+  };
 
   const handleSearch = () => {
     setSearchQuery(searchInput);
@@ -118,7 +229,7 @@ const DashboardServicesPage = () => {
 
   const openAddModal = () => {
     setEditingId(null);
-    setForm({ ...emptyForm, order_index: services.length });
+    setForm({ ...emptyForm, show_price: true, order_index: services.length });
     setShowModal(true);
   };
 
@@ -131,11 +242,15 @@ const DashboardServicesPage = () => {
     const faqsStr = (service.faqs || [])
       .map((f: { question: string; answer: string }) => `${f.question}|${f.answer}`)
       .join("\n");
+
+    const isHidden = hiddenPriceIds.includes(service.id);
+
     setForm({
       title: service.title,
       description: service.description || "",
       icon: service.icon || "ri-camera-line",
       price: service.price || "",
+      show_price: !isHidden,
       features: (service.features || []).join("\n"),
       order_index: service.order_index || 0,
       status: service.status || "نشط",
@@ -188,8 +303,26 @@ const DashboardServicesPage = () => {
     try {
       if (editingId) {
         await supabase.from("services").update(payload).eq("id", editingId);
+
+        const updatedHidden = form.show_price
+          ? hiddenPriceIds.filter((id) => id !== editingId)
+          : hiddenPriceIds.includes(editingId)
+          ? hiddenPriceIds
+          : [...hiddenPriceIds, editingId];
+
+        await syncHiddenPriceIds(updatedHidden);
       } else {
-        await supabase.from("services").insert(payload);
+        const { data: inserted, error: insertErr } = await supabase
+          .from("services")
+          .insert(payload)
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+
+        if (inserted && !form.show_price) {
+          await syncHiddenPriceIds([...hiddenPriceIds, inserted.id]);
+        }
       }
 
       setShowModal(false);
@@ -205,6 +338,9 @@ const DashboardServicesPage = () => {
   const handleDelete = async (id: string) => {
     try {
       await supabase.from("services").delete().eq("id", id);
+      if (hiddenPriceIds.includes(id)) {
+        await syncHiddenPriceIds(hiddenPriceIds.filter((i) => i !== id));
+      }
       setDeleteConfirm(null);
       await fetchServices();
     } catch (err: unknown) {
@@ -221,16 +357,116 @@ const DashboardServicesPage = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black text-white">إدارة الخدمات</h1>
-          <p className="text-white/40 text-sm mt-1">الباقات والأسعار</p>
+          <p className="text-white/40 text-sm mt-1 flex items-center gap-2">
+            <span>{pageBadge}</span>
+            <span>•</span>
+            <span>{pageTitle}</span>
+          </p>
         </div>
-        <button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer whitespace-nowrap transition-colors">
-          <div className="w-5 h-5 flex items-center justify-center"><i className="ri-add-line"></i></div>
-          إضافة خدمة
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => setShowHeaderSettings(!showHeaderSettings)}
+            className={`px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer transition-all border ${
+              showHeaderSettings
+                ? "bg-blue-600/25 border-blue-500 text-blue-300"
+                : "bg-white/5 border-white/10 hover:border-white/20 text-white/90 hover:text-white"
+            }`}
+          >
+            <i className="ri-settings-3-line text-blue-400"></i>
+            تعديل العناوين
+          </button>
+          <button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer whitespace-nowrap transition-colors shadow-lg shadow-blue-600/20">
+            <div className="w-5 h-5 flex items-center justify-center"><i className="ri-add-line"></i></div>
+            إضافة خدمة
+          </button>
+        </div>
       </div>
+
+      {/* Header Settings Card (الباقات والأسعار & جميع الخدمات) */}
+      {showHeaderSettings && (
+        <div className="bg-[#0f2238] border border-blue-500/30 rounded-2xl p-5 mb-6 shadow-xl shadow-blue-500/5">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center">
+                <i className="ri-text-snippet text-lg"></i>
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-sm">تعديل نصوص وعناوين قسم الخدمات في الموقع</h3>
+                <p className="text-white/40 text-xs mt-0.5">يمكنك تغيير الشارة والعنوان المعروضين في صفحة الخدمات</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowHeaderSettings(false)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 text-white/40 hover:text-white cursor-pointer transition-colors"
+            >
+              <i className="ri-close-line"></i>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">
+                شارة القسم / النص الصغير العلوي
+              </label>
+              <input
+                type="text"
+                value={pageBadge}
+                onChange={(e) => setPageBadge(e.target.value)}
+                placeholder="الباقات والأسعار"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-white/30 text-[11px] mt-1">يظهر كشارة صغيرة أعلى العنوان (مثل: الباقات والأسعار)</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">
+                العنوان الرئيسي لقسم الخدمات
+              </label>
+              <input
+                type="text"
+                value={pageTitle}
+                onChange={(e) => setPageTitle(e.target.value)}
+                placeholder="جميع الخدمات"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-white/30 text-[11px] mt-1">العنوان الرئيسي البارز للقسم (مثل: جميع الخدمات)</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              onClick={() => {
+                setPageBadge("الباقات والأسعار");
+                setPageTitle("جميع الخدمات");
+              }}
+              type="button"
+              className="text-xs text-white/40 hover:text-white px-3 py-2 cursor-pointer transition-colors"
+            >
+              استعادة الافتراضي
+            </button>
+            <button
+              onClick={handleSaveHeaders}
+              disabled={savingHeaders}
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/20"
+            >
+              {savingHeaders ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  جاري الحفظ...
+                </>
+              ) : (
+                <>
+                  <i className="ri-check-line text-base"></i>
+                  حفظ العناوين
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search + Filters */}
       <div className="bg-[#0d1b2e] border border-white/10 rounded-2xl p-4 mb-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -281,35 +517,58 @@ const DashboardServicesPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {services.map((service) => (
-            <div key={service.id} className="bg-[#0d1b2e] border border-white/10 rounded-2xl p-5 hover:border-blue-500/30 transition-colors group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center">
-                    <i className={`${service.icon || "ri-camera-line"} text-blue-400`}></i>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm">{service.title}</h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {service.category && <span className="text-white/30 text-xs">{service.category}</span>}
-                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${service.status === "مسودة" ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"}`}>{service.status === "مسودة" ? "مسودة" : "نشط"}</span>
+          {services.map((service) => {
+            const isPriceHidden = hiddenPriceIds.includes(service.id);
+            return (
+              <div key={service.id} className="bg-[#0d1b2e] border border-white/10 rounded-2xl p-5 hover:border-blue-500/30 transition-colors group">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center">
+                      <i className={`${service.icon || "ri-camera-line"} text-blue-400`}></i>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-sm">{service.title}</h3>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {service.category && <span className="text-white/30 text-xs">{service.category}</span>}
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${service.status === "مسودة" ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"}`}>{service.status === "مسودة" ? "مسودة" : "نشط"}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => navigate(`/dashboard/services/${service.id}`)} className="w-7 h-7 flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-600/20 rounded-lg transition-colors cursor-pointer" title="عرض التفاصيل"><i className="ri-eye-line text-xs"></i></button>
+                    <button onClick={() => openEditModal(service)} className="w-7 h-7 flex items-center justify-center text-amber-400 hover:text-amber-300 hover:bg-amber-600/20 rounded-lg transition-colors cursor-pointer" title="تعديل"><i className="ri-edit-line text-xs"></i></button>
+                    <button onClick={() => setDeleteConfirm(service.id)} className="w-7 h-7 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer" title="حذف"><i className="ri-delete-bin-line text-xs"></i></button>
+                  </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => navigate(`/dashboard/services/${service.id}`)} className="w-7 h-7 flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-600/20 rounded-lg transition-colors cursor-pointer" title="عرض التفاصيل"><i className="ri-eye-line text-xs"></i></button>
-                  <button onClick={() => openEditModal(service)} className="w-7 h-7 flex items-center justify-center text-amber-400 hover:text-amber-300 hover:bg-amber-600/20 rounded-lg transition-colors cursor-pointer" title="تعديل"><i className="ri-edit-line text-xs"></i></button>
-                  <button onClick={() => setDeleteConfirm(service.id)} className="w-7 h-7 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer" title="حذف"><i className="ri-delete-bin-line text-xs"></i></button>
+                <p className="text-white/40 text-xs mb-4 line-clamp-2">{service.description || "—"}</p>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-white/5 rounded-xl p-3 text-center">
+                    <div className="text-lg font-black text-white">{(service.features || []).length}</div>
+                    <div className="text-xs text-white/40">ميزات</div>
+                  </div>
+                  <div className="bg-blue-600/20 rounded-xl p-2.5 text-center flex flex-col justify-between">
+                    <div className="text-sm font-black text-blue-400 truncate" title={service.price || "—"}>{service.price || "—"}</div>
+                    <button
+                      onClick={() => togglePriceVisibility(service.id)}
+                      title={isPriceHidden ? "اضغط لإظهار السعر في الموقع" : "اضغط لإخفاء السعر من الموقع"}
+                      className={`mt-1 inline-flex items-center justify-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                        isPriceHidden
+                          ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                          : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                      }`}
+                    >
+                      <i className={isPriceHidden ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                      {isPriceHidden ? "السعر مخفي" : "السعر معروض"}
+                    </button>
+                  </div>
+                  <div className="bg-emerald-500/20 rounded-xl p-3 text-center">
+                    <div className="text-sm font-black text-emerald-400">#{service.order_index ?? 0}</div>
+                    <div className="text-xs text-white/40">الترتيب</div>
+                  </div>
                 </div>
               </div>
-              <p className="text-white/40 text-xs mb-4 line-clamp-2">{service.description || "—"}</p>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-white/5 rounded-xl p-3 text-center"><div className="text-lg font-black text-white">{(service.features || []).length}</div><div className="text-xs text-white/40">ميزات</div></div>
-                <div className="bg-blue-600/20 rounded-xl p-3 text-center"><div className="text-lg font-black text-blue-400">{service.price || "—"}</div><div className="text-xs text-white/40">السعر</div></div>
-                <div className="bg-emerald-500/20 rounded-xl p-3 text-center"><div className="text-sm font-black text-emerald-400">#{service.order_index ?? 0}</div><div className="text-xs text-white/40">الترتيب</div></div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -343,6 +602,31 @@ const DashboardServicesPage = () => {
                   <input type="text" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500" placeholder="يبدأ من 500$" />
                 </div>
               </div>
+
+              {/* Price Visibility Switch */}
+              <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${form.show_price ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                    <i className={form.show_price ? "ri-eye-line text-base" : "ri-eye-off-line text-base"}></i>
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">إظهار السعر في الموقع</div>
+                    <p className="text-[11px] text-white/40">
+                      {form.show_price ? "السعر سيظهر للزوار في صفحة الخدمات والصفحة الرئيسية" : "سيتم إخفاء السعر من العرض وعرض (حسب الطلب)"}
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={form.show_price}
+                    onChange={(e) => setForm({ ...form, show_price: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1.5">التصنيف</label>
