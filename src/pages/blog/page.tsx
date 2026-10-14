@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
 
 interface BlogPost {
   id: string;
@@ -29,16 +30,21 @@ const BlogPage = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("show_blog")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
+    async function loadSettings() {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("show_blog")
+          .eq("id", 1)
+          .maybeSingle();
         if (data) setSectionEnabled(data.show_blog !== false);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
+      } catch {
+        // default enabled
+      } finally {
+        setChecking(false);
+      }
+    }
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -105,6 +111,7 @@ const BlogPage = () => {
   if (!sectionEnabled) {
     return (
       <div className="min-h-screen bg-[#f8faff] flex items-center justify-center" dir="rtl">
+        <SEO title="المدونة غير متاحة | حسن جمال الليل" robots="noindex, nofollow" />
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-eye-off-line text-gray-400 text-2xl"></i>
@@ -146,6 +153,11 @@ const BlogPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title="المدونة | مقالات ودروس في التصوير والمونتاج بالذكاء الاصطناعي"
+        description="مقالات متخصصة، شروحات تقنية، ونصائح عملية في التصوير والمونتاج بالذكاء الاصطناعي وهندسة البرومبتات."
+        canonicalPath="/blog"
+      />
       <Navbar />
 
       {/* Hero */}

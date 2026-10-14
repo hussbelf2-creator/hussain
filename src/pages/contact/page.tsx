@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/pages/home/components/Navbar";
 import FooterSection from "@/pages/home/components/FooterSection";
 import { supabase } from "@/lib/supabase";
+import SEO from "@/components/seo/SEO";
 
 interface ContactItem {
   icon: string;
@@ -45,12 +46,14 @@ const ContactPage = () => {
   const [showConsultation, setShowConsultation] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("show_contact, contact_items, contact_faqs, whatsapp_number, whatsapp_consultation_message, show_consultation")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
+    async function loadData() {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("show_contact, contact_items, contact_faqs, whatsapp_number, whatsapp_consultation_message, show_consultation")
+          .eq("id", 1)
+          .maybeSingle();
+
         if (data) {
           if (data.show_contact === false) {
             navigate("/");
@@ -66,9 +69,13 @@ const ContactPage = () => {
           if (data.whatsapp_consultation_message) setConsultationMessage(data.whatsapp_consultation_message);
           setShowConsultation(data.show_consultation !== false);
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch {
+        // use defaults
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, [navigate]);
 
   const visibleItems = contactItems.filter((item) => item.visible !== false);
@@ -79,6 +86,7 @@ const ContactPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+        <SEO title="تواصل معي | حسن جمال الليل" canonicalPath="/contact" />
         <Navbar />
         <div className="flex items-center justify-center py-40">
           <div className="w-10 h-10 border-2 border-[#0d1b2e] border-t-transparent rounded-full animate-spin"></div>
@@ -90,6 +98,11 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title="تواصل معي | حجز استشارة ومناقشة مشروعك القادم"
+        description="تواصل مع حسن جمال الليل لحجز استشارة مجانية أو مناقشة مشروعك القادم في التصوير والمونتاج بالذكاء الاصطناعي."
+        canonicalPath="/contact"
+      />
       <Navbar />
 
       {/* Hero */}

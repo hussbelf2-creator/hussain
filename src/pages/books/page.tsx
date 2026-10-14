@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
 
 interface Book {
   id: string;
@@ -52,37 +53,33 @@ const BooksPage = () => {
   ]);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("show_books")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setSectionEnabled(data.show_books !== false);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
-  }, []);
+    async function loadSettings() {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("show_books, store_hero_title, store_hero_title_highlight, store_hero_subtitle, store_features, store_faqs")
+          .eq("id", 1)
+          .maybeSingle();
 
-  useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("store_hero_title, store_hero_title_highlight, store_hero_subtitle, store_features, store_faqs")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data) return;
-        if (data.store_hero_title) setStoreHeroTitle(data.store_hero_title);
-        if (data.store_hero_title_highlight) setStoreHeroHighlight(data.store_hero_title_highlight);
-        if (data.store_hero_subtitle) setStoreHeroSubtitle(data.store_hero_subtitle);
-        if (Array.isArray(data.store_features) && data.store_features.length > 0) {
-          setFeatures(data.store_features as StoreFeature[]);
+        if (data) {
+          setSectionEnabled(data.show_books !== false);
+          if (data.store_hero_title) setStoreHeroTitle(data.store_hero_title);
+          if (data.store_hero_title_highlight) setStoreHeroHighlight(data.store_hero_title_highlight);
+          if (data.store_hero_subtitle) setStoreHeroSubtitle(data.store_hero_subtitle);
+          if (Array.isArray(data.store_features) && data.store_features.length > 0) {
+            setFeatures(data.store_features as StoreFeature[]);
+          }
+          if (Array.isArray(data.store_faqs) && data.store_faqs.length > 0) {
+            setFaqs(data.store_faqs as StoreFaq[]);
+          }
         }
-        if (Array.isArray(data.store_faqs) && data.store_faqs.length > 0) {
-          setFaqs(data.store_faqs as StoreFaq[]);
-        }
-      })
-      .catch(() => {});
+      } catch {
+        // use defaults
+      } finally {
+        setChecking(false);
+      }
+    }
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -118,6 +115,7 @@ const BooksPage = () => {
   if (!sectionEnabled) {
     return (
       <div className="min-h-screen bg-[#f8faff] flex items-center justify-center" dir="rtl">
+        <SEO title="المتجر الرقمي غير متاح | حسن جمال الليل" robots="noindex, nofollow" />
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-eye-off-line text-gray-400 text-2xl"></i>
@@ -159,6 +157,11 @@ const BooksPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title="المتجر الرقمي والكتب الإلكترونية | حسن جمال الليل"
+        description="كتب إلكترونية ومكتبات برومبتات وقوالب احترافية لتوفير وقتك وتحسين نتائجك في الإنتاج البصري بالذكاء الاصطناعي."
+        canonicalPath="/books"
+      />
       <Navbar />
 
       {/* Hero */}

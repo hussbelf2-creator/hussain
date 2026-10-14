@@ -1,0 +1,24 @@
+# Robots.txt for Hassan Jamalullail Portfolio & Digital Services
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /portfolio
+Allow: /services
+Allow: /services/*
+Allow: /books
+Allow: /books/*
+Allow: /blog
+Allow: /blog/*
+Allow: /prompt
+Allow: /clients
+Allow: /memberships
+Allow: /contact
+
+# Disallow private and administrative areas
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /auth/login
+Disallow: /auth/*
+
+# Sitemap reference
+Sitemap: https://hassanalil.com/sitemap.xml

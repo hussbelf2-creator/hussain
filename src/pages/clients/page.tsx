@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
 
 interface ClientLogo {
   id: string;
@@ -73,6 +74,11 @@ const ClientsPage = () => {
 
   return (
     <div className="min-h-screen bg-background-50" dir="rtl">
+      <SEO
+        title="شركاء النجاح والعملاء | حسن جمال الليل"
+        description="علامات تجارية وصنّاع محتوى ومشاريع وثقت بالتعاون مع حسن جمال الليل في إنتاجها البصري وتصويرها بالذكاء الاصطناعي."
+        canonicalPath="/clients"
+      />
       <Navbar />
 
       {/* Header */}

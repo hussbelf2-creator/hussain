@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
 
 interface PortfolioItem {
   id: string;
@@ -47,16 +48,21 @@ const PortfolioPage = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("show_portfolio")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
+    async function checkSection() {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("show_portfolio")
+          .eq("id", 1)
+          .maybeSingle();
         if (data) setSectionEnabled(data.show_portfolio !== false);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
+      } catch {
+        // keep defaults
+      } finally {
+        setChecking(false);
+      }
+    }
+    checkSection();
   }, []);
 
   useEffect(() => {
@@ -149,6 +155,11 @@ const PortfolioPage = () => {
 
   return (
     <div className="min-h-screen bg-background-50" dir="rtl">
+      <SEO
+        title="معرض الأعمال | تصوير وإعلانات سينمائية بالذكاء الاصطناعي"
+        description="استعرض أحدث أعمال ومشاريع حسن جمال الليل في إنتاج الصور التجارية والفيديو السينمائي باستخدام تقنيات AI المتقدمة."
+        canonicalPath="/portfolio"
+      />
       <Navbar />
 
       {/* Header */}

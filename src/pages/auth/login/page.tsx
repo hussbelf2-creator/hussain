@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import SEO from "@/components/seo/SEO";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -41,6 +42,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0a1628] flex items-center justify-center p-4" dir="rtl">
+      <SEO title="تسجيل الدخول | لوحة التحكم" robots="noindex, nofollow" />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">

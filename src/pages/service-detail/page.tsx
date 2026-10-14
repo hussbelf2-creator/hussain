@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
 import { supabase } from "@/lib/supabase";
+import SEO from "@/components/seo/SEO";
+import { getServiceSchema } from "@/lib/seo";
 
 interface Service {
   id: string;
@@ -101,6 +103,7 @@ const ServiceDetailPage = () => {
   if (!service) {
     return (
       <div className="min-h-screen bg-[#0d1b2e] flex items-center justify-center" dir="rtl">
+        <SEO title="الخدمة غير موجودة | حسن جمال الليل" robots="noindex, nofollow" />
         <div className="text-center">
           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-error-warning-line text-blue-400 text-2xl"></i>
@@ -120,6 +123,12 @@ const ServiceDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0d1b2e]" dir="rtl">
+      <SEO
+        title={`${service.title} | حسن جمال الليل`}
+        description={service.description || undefined}
+        canonicalPath={`/services/${id}`}
+        schema={getServiceSchema(service)}
+      />
       <Navbar />
 
       {/* Hero */}

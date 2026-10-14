@@ -3,13 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
+import { getArticleSchema } from "@/lib/seo";
 
 interface BlogPost {
   id: string;
   title: string;
   slug: string;
   excerpt: string;
-  content: string;
+  content?: string;
   cover_url: string;
   tags: string[];
   created_at: string;
@@ -39,7 +41,7 @@ const BlogDetailPage = () => {
         if (data) {
           const { data: relatedData } = await supabase
             .from("blog_posts")
-            .select("id, title, slug, excerpt, cover_url, tags, created_at")
+            .select("id, title, slug, excerpt, content, cover_url, tags, created_at")
             .eq("published", true)
             .neq("id", data.id)
             .order("created_at", { ascending: false })
@@ -85,6 +87,7 @@ const BlogDetailPage = () => {
   if (!article) {
     return (
       <div className="min-h-screen bg-[#f8faff] flex items-center justify-center" dir="rtl">
+        <SEO title="المقال غير موجود | مدونة حسن جمال الليل" robots="noindex, nofollow" />
         <div className="text-center">
           <h1 className="text-2xl font-bold text-[#0d1b2e] mb-4">المقال غير موجود</h1>
           <button
@@ -100,6 +103,16 @@ const BlogDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title={`${article.title} | مدونة حسن جمال الليل`}
+        description={article.excerpt || undefined}
+        image={article.cover_url}
+        type="article"
+        canonicalPath={`/blog/${slug}`}
+        publishedTime={article.created_at}
+        tags={article.tags}
+        schema={getArticleSchema(article)}
+      />
       <Navbar />
 
       {/* Hero Image */}

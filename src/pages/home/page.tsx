@@ -10,6 +10,8 @@ import BooksSection from "./components/BooksSection";
 import BlogSection from "./components/BlogSection";
 import FooterSection from "./components/FooterSection";
 import { supabase } from "@/lib/supabase";
+import SEO from "@/components/seo/SEO";
+import { getWebSiteSchema, getPersonSchema } from "@/lib/seo";
 
 interface SectionToggles {
   show_blog: boolean;
@@ -35,12 +37,14 @@ const HomePage = () => {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("whatsapp_number, show_blog, show_books, show_portfolio, show_clients, show_services, show_prompts, show_prompt_generator")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
+    async function fetchSettings() {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("whatsapp_number, show_blog, show_books, show_portfolio, show_clients, show_services, show_prompts, show_prompt_generator")
+          .eq("id", 1)
+          .maybeSingle();
+
         if (data) {
           if (data.whatsapp_number) setWhatsapp(data.whatsapp_number);
           setToggles({
@@ -53,13 +57,23 @@ const HomePage = () => {
             show_prompt_generator: data.show_prompt_generator !== false,
           });
         }
-      })
-      .catch(() => {})
-      .finally(() => setSettingsLoaded(true));
+      } catch {
+        // keep defaults
+      } finally {
+        setSettingsLoaded(true);
+      }
+    }
+    fetchSettings();
   }, []);
 
   return (
     <div className="min-h-screen font-sans" style={{ fontFamily: "'Cairo', sans-serif" }}>
+      <SEO
+        title="حسن جمال الليل | مصور ومونتير AI احترافي - تصوير وإنتاج فيديو بالذكاء الاصطناعي"
+        description="حسن جمال الليل - فني AI متخصص في الإنتاج البصري وتوليد الصور ومونتاج الفيديو بالذكاء الاصطناعي. خدمات احترافية، كتب رقمية، وهندسة برومبتات."
+        canonicalPath="/"
+        schema={[getWebSiteSchema(), getPersonSchema()]}
+      />
       <Navbar />
       <HeroSection />
       <AboutSection />

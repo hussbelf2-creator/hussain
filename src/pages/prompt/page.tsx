@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
 
 interface PromptItem {
   id: string;
@@ -75,16 +76,21 @@ const PromptPage = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("show_prompts")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
+    async function loadSettings() {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("show_prompts")
+          .eq("id", 1)
+          .maybeSingle();
         if (data) setSectionEnabled(data.show_prompts !== false);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
+      } catch {
+        // default enabled
+      } finally {
+        setChecking(false);
+      }
+    }
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -123,6 +129,7 @@ const PromptPage = () => {
   if (!sectionEnabled) {
     return (
       <div className="min-h-screen bg-[#0d1b2e] flex items-center justify-center" dir="rtl">
+        <SEO title="مكتبة البرومبت غير متاحة | حسن جمال الليل" robots="noindex, nofollow" />
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-eye-off-line text-white/30 text-2xl"></i>
@@ -164,6 +171,11 @@ const PromptPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0d1b2e]" dir="rtl">
+      <SEO
+        title="مولد ومكتبة البرومبت الاحترافية | حسن جمال الليل"
+        description="مكتبة أوامر وبرومبتات احترافية لتوليد الصور والفيديوهات الإبداعية بالذكاء الاصطناعي مع أمثلة عملية."
+        canonicalPath="/prompt"
+      />
       <Navbar />
 
       {/* Hero */}

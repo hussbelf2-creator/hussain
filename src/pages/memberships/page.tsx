@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
 
 const plans = [
   {
@@ -128,6 +129,11 @@ const MembershipsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title="خطط العضوية والاشتراكات | أدوات الإنتاج بالذكاء الاصطناعي"
+        description="اختر الباقة المناسبة لاحتياجاتك واستفد من مولد البرومبت ومكتبة القوالب الاحترافية للإنتاج البصري بالذكاء الاصطناعي."
+        canonicalPath="/memberships"
+      />
       <Navbar />
 
       {/* Hero */}

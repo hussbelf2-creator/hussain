@@ -4,6 +4,7 @@ import Navbar from "@/pages/home/components/Navbar";
 import FooterSection from "@/pages/home/components/FooterSection";
 import { supabase } from "@/lib/supabase";
 import { defaultHomeSections, mergeHomeSections, type ServicesTexts } from "@/lib/homeSections";
+import SEO from "@/components/seo/SEO";
 
 interface Service {
   id: string;
@@ -121,6 +122,11 @@ const ServicesPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0d1b2e]" dir="rtl">
+      <SEO
+        title={`${pageBadge} - ${pageTitle} | خدمات الإنتاج البصري`}
+        description="باقات وخدمات متكاملة في الإنتاج البصري وتوليد الصور ومونتاج الفيديو بالذكاء الاصطناعي بجودة سينمائية."
+        canonicalPath="/services"
+      />
       <Navbar />
 
       {/* Hero */}

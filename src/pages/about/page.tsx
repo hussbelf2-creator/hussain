@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../home/components/Navbar";
 import FooterSection from "../home/components/FooterSection";
 import { supabase } from "@/lib/supabase";
+import SEO from "@/components/seo/SEO";
+import { getPersonSchema } from "@/lib/seo";
 
 interface AboutPageSettings {
   about_name: string;
@@ -110,6 +112,14 @@ const AboutPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title="من أنا | خبرتي في الإنتاج البصري والمونتاج بالذكاء الاصطناعي"
+        description={`${about_name} - ${about_title}. خبرة ${about_years_exp} في التصوير التجاري ومونتاج الأفلام بالذكاء الاصطناعي.`}
+        canonicalPath="/about"
+        image={about_photo_url}
+        type="profile"
+        schema={getPersonSchema()}
+      />
       <Navbar />
 
       {/* Hero */}

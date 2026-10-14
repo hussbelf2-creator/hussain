@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/pages/home/components/Navbar";
 import FooterSection from "@/pages/home/components/FooterSection";
+import SEO from "@/components/seo/SEO";
+import { getBookSchema } from "@/lib/seo";
 
 interface Book {
   id: string;
@@ -110,6 +112,7 @@ const BookDetailPage = () => {
   if (!book) {
     return (
       <div className="min-h-screen bg-[#f8faff] flex items-center justify-center" dir="rtl">
+        <SEO title="الكتاب غير موجود | حسن جمال الليل" robots="noindex, nofollow" />
         <div className="text-center">
           <p className="text-gray-500 text-lg mb-4">الكتاب غير موجود</p>
           <button onClick={() => navigate("/books")} className="bg-[#0d1b2e] text-white px-6 py-3 rounded-lg cursor-pointer">
@@ -122,6 +125,14 @@ const BookDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faff]" dir="rtl">
+      <SEO
+        title={`${book.title} | المتجر الرقمي`}
+        description={book.description}
+        image={book.cover_url}
+        type="product"
+        canonicalPath={`/books/${id}`}
+        schema={getBookSchema(book)}
+      />
       <Navbar />
 
       {/* Breadcrumb */}
