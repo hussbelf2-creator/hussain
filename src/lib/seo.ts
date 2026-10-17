@@ -13,22 +13,15 @@ export interface SEOProps {
 }
 
 export const SITE_DEFAULTS = {
-  siteName: "حسن جمال الليل | فني ومونتير AI احترافي",
+  siteName: "حسن جمال الليل | فني AI",
   author: "حسن جمال الليل",
   siteUrl: "https://hassanalil.com",
-  defaultTitle: "حسن جمال الليل | مصور ومونتير AI احترافي - تصوير وإنتاج فيديو بالذكاء الاصطناعي",
+  defaultTitle: "حسن جمال الليل | فني AI",
   titleSuffix: " | حسن جمال الليل",
-  defaultDescription:
-    "حسن جمال الليل - فني AI متخصص في الإنتاج البصري وتوليد الصور ومونتاج الفيديو بالذكاء الاصطناعي. خدمات احترافية، كتب رقمية، وهندسة برومبتات.",
+  defaultDescription: "",
   defaultKeywords: [
-    "AI Photography",
-    "مصور ذكاء اصطناعي",
-    "مونتاج فيديو AI",
-    "برومبتات Midjourney",
-    "إنتاج سينمائي",
     "حسن جمال الليل",
-    "تصوير منتجات AI",
-    "هندسة برومبتات",
+    "فني AI",
   ],
   defaultImage: "https://hassanalil.com/me.jpg",
   locale: "ar_SA",

@@ -35,8 +35,11 @@ export default function SEO({
       key: string,
       content?: string
     ) => {
-      if (!content) return;
       let element = document.querySelector(`meta[${attribute}="${key}"]`);
+      if (!content) {
+        if (element) element.remove();
+        return;
+      }
       if (!element) {
         element = document.createElement("meta");
         element.setAttribute(attribute, key);

@@ -69,8 +69,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen font-sans" style={{ fontFamily: "'Cairo', sans-serif" }}>
       <SEO
-        title="حسن جمال الليل | مصور ومونتير AI احترافي - تصوير وإنتاج فيديو بالذكاء الاصطناعي"
-        description="حسن جمال الليل - فني AI متخصص في الإنتاج البصري وتوليد الصور ومونتاج الفيديو بالذكاء الاصطناعي. خدمات احترافية، كتب رقمية، وهندسة برومبتات."
+        title="حسن جمال الليل | فني AI"
         canonicalPath="/"
         schema={[getWebSiteSchema(), getPersonSchema()]}
       />
