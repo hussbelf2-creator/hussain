@@ -45,30 +45,34 @@ const AboutPage = () => {
       { name: "Premiere Pro", category: "مونتاج", logo: "https://storage.readdy-site.link/project_files/89593955-b165-4908-8cef-673a8d5d832b/cfc13a8e-ef49-438b-abdc-5d0ff0885aa9_Adobe_Premiere_Pro_CC_icon.svg.png?v=3f275fd0f657e830dbd9763f97119ea3" },
     ],
   });
-  const [stats, setStats] = useState([
-    { icon: "ri-folder-check-line", value: "+200", label: "مشروع منجز", detail: "في تصوير المنتجات والأفلام والإعلانات" },
-    { icon: "ri-user-star-line", value: "+50", label: "عميل راضٍ", detail: "من 10 دول حول العالم" },
-    { icon: "ri-book-2-line", value: "4", label: "كتب منشورة", detail: "في مجال AI Photography وهندسة البرومبتات" },
-    { icon: "ri-eye-line", value: "500K+", label: "مشاهدة", detail: "لمحتوى الإنتاج البصري" },
-    { icon: "ri-award-line", value: "7+", label: "سنوات خبرة", detail: "في التصوير والمونتاج والذكاء الاصطناعي" },
-    { icon: "ri-global-line", value: "10", label: "دولة", detail: "عملاء من مختلف أنحاء العالم" },
+  const [stats, setStats] = useState<Array<{ icon?: string; value: string; label: string; detail?: string }>>([
+    { icon: "ri-briefcase-4-line", value: "+15", label: "مشروع منجز", detail: "في تصوير المنتجات والأفلام والإعلانات" },
+    { icon: "ri-user-star-line", value: "+100", label: "عميل راضٍ", detail: "من عدة دول حول العالم" },
+    { icon: "ri-book-2-line", value: "10", label: "كتب منشورة", detail: "في مجال AI Photography وهندسة البرومبتات" },
+    { icon: "ri-eye-line", value: "1k+", label: "مشاهدة", detail: "لمحتوى الإنتاج البصري" },
+    { icon: "ri-star-fill", value: "4.9", label: "متوسط التقييم", detail: "تقييم العملاء للخدمات" },
+    { icon: "ri-time-line", value: "24h", label: "متوسط وقت الرد", detail: "سرعة في التواصل والتنفيذ" },
   ]);
+
+  const [showServices, setShowServices] = useState(true);
 
   const tools = settings.about_tech_stack;
 
   useEffect(() => {
     loadSettings();
-    loadStats();
   }, []);
 
   const loadSettings = async () => {
     try {
       const { data } = await supabase
         .from("site_settings")
-        .select("about_name, about_title, about_bio_2, about_years_exp, about_photo_url, about_specializations, about_timeline, about_tech_stack")
+        .select("about_name, about_title, about_bio_2, about_years_exp, about_photo_url, about_specializations, about_timeline, about_tech_stack, home_stats, show_services")
         .eq("id", 1)
         .maybeSingle();
       if (data) {
+        if (data.show_services !== undefined && data.show_services !== null) {
+          setShowServices(data.show_services !== false);
+        }
         setSettings({
           about_name: data.about_name || settings.about_name,
           about_title: data.about_title || settings.about_title,
@@ -79,32 +83,31 @@ const AboutPage = () => {
           about_timeline: data.about_timeline || settings.about_timeline,
           about_tech_stack: data.about_tech_stack?.length ? data.about_tech_stack : settings.about_tech_stack,
         });
+
+        if (data.home_stats && Array.isArray(data.home_stats) && data.home_stats.length > 0) {
+          const detailMap: Record<string, string> = {
+            "مشروع منجز": "في تصوير المنتجات والأفلام والإعلانات",
+            "عميل راضٍ": "من عدة دول حول العالم",
+            "عملاء راضون": "من عدة دول حول العالم",
+            "كتب منشورة": "في مجال AI Photography وهندسة البرومبتات",
+            "كتب رقمية": "في مجال AI Photography وهندسة البرومبتات",
+            "مشاهدة": "لمحتوى الإنتاج البصري",
+            "سنوات خبرة": "في التصوير والمونتاج والذكاء الاصطناعي",
+            "متوسط التقييم": "تقييم العملاء للخدمات",
+            "متوسط وقت الرد": "سرعة في التواصل والتنفيذ",
+            "دولة": "عملاء من مختلف أنحاء العالم",
+          };
+
+          setStats(
+            data.home_stats.map((s: { value: string; label: string; icon?: string; detail?: string }) => ({
+              value: s.value,
+              label: s.label,
+              icon: s.icon || "ri-bar-chart-line",
+              detail: s.detail || detailMap[s.label] || "",
+            }))
+          );
+        }
       }
-    } catch { /* keep defaults */ }
-  };
-
-  const loadStats = async () => {
-    try {
-      const [{ count: portfolioCount }, { count: testimonialsCount }, { count: booksCount }] = await Promise.all([
-        supabase.from("portfolio_items").select("*", { count: "exact", head: true }),
-        supabase.from("testimonials").select("*", { count: "exact", head: true }),
-        supabase.from("books").select("*", { count: "exact", head: true }),
-      ]);
-
-      const pCount = portfolioCount || 0;
-      const tCount = testimonialsCount || 0;
-      const bCount = booksCount || 0;
-      const totalContent = pCount + bCount;
-      const estimatedViews = totalContent > 0 ? `${Math.floor(totalContent * 340 / 1000)}K+` : "500K+";
-
-      setStats([
-        { icon: "ri-folder-check-line", value: `+${pCount || 200}`, label: "مشروع منجز", detail: "في تصوير المنتجات والأفلام والإعلانات" },
-        { icon: "ri-user-star-line", value: `+${tCount || 50}`, label: "عميل راضٍ", detail: "من 10 دول حول العالم" },
-        { icon: "ri-book-2-line", value: `${bCount || 4}`, label: "كتب منشورة", detail: "في مجال AI Photography وهندسة البرومبتات" },
-        { icon: "ri-eye-line", value: estimatedViews, label: "مشاهدة", detail: "لمحتوى الإنتاج البصري" },
-        { icon: "ri-award-line", value: `${settings.about_years_exp}`, label: "سنوات خبرة", detail: "في التصوير والمونتاج والذكاء الاصطناعي" },
-        { icon: "ri-global-line", value: "10", label: "دولة", detail: "عملاء من مختلف أنحاء العالم" },
-      ]);
     } catch { /* keep defaults */ }
   };
 
@@ -155,10 +158,10 @@ const AboutPage = () => {
             </div>
 
             <div className="flex-1 text-center lg:text-right">
-              <div className="flex items-center gap-2 mb-4 justify-center lg:justify-start">
+              {/* <div className="flex items-center gap-2 mb-4 justify-center lg:justify-start">
                 <div className="w-8 h-0.5 bg-blue-400"></div>
                 <span className="text-blue-400 text-sm font-semibold tracking-wider uppercase">المصور</span>
-              </div>
+              </div> */}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4">
                 {about_name}
               </h1>
@@ -173,15 +176,15 @@ const AboutPage = () => {
       {/* Stats */}
       <section className="py-16 px-4 md:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {stats.map((ach) => (
-              <div key={ach.label} className="bg-[#f8faff] border border-gray-100 rounded-2xl p-5 text-center hover:border-blue-200 transition-colors">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+            {stats.map((ach, idx) => (
+              <div key={`${ach.label}-${idx}`} className="bg-[#f8faff] border border-gray-100 rounded-2xl p-5 text-center hover:border-blue-200 transition-colors">
                 <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <i className={`${ach.icon} text-blue-600 text-lg`}></i>
+                  <i className={`${ach.icon || "ri-bar-chart-line"} text-blue-600 text-lg`}></i>
                 </div>
                 <div className="text-2xl font-black text-[#0d1b2e]">{ach.value}</div>
                 <div className="text-gray-700 text-sm font-semibold mt-1">{ach.label}</div>
-                <div className="text-gray-400 text-xs mt-1">{ach.detail}</div>
+                {ach.detail && <div className="text-gray-400 text-xs mt-1">{ach.detail}</div>}
               </div>
             ))}
           </div>
@@ -278,15 +281,21 @@ const AboutPage = () => {
             دعنا نناقش مشروعك ونرى كيف يمكن للذكاء الاصطناعي أن يحول فكرتك إلى واقع
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => navigate("/services/ai-product-photography")}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-lg font-bold transition-colors cursor-pointer whitespace-nowrap"
-            >
-              اكتشف الخدمات
-            </button>
+            {showServices && (
+              <button
+                onClick={() => navigate("/services")}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-lg font-bold transition-colors cursor-pointer whitespace-nowrap"
+              >
+                اكتشف الخدمات
+              </button>
+            )}
             <button
               onClick={() => navigate("/")}
-              className="border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-lg font-semibold transition-colors cursor-pointer whitespace-nowrap"
+              className={`${
+                showServices
+                  ? "border border-white/20 hover:border-white/40 text-white"
+                  : "bg-blue-600 hover:bg-blue-500 text-white"
+              } px-8 py-4 rounded-lg font-semibold transition-colors cursor-pointer whitespace-nowrap`}
             >
               شوف الأعمال
             </button>

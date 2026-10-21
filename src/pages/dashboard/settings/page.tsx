@@ -1106,7 +1106,7 @@ const DashboardSettingsPage = () => {
               </div>
               <h3 className="font-bold text-white">الإحصائيات</h3>
             </div>
-            <p className="text-white/30 text-xs mb-5">هذه الإحصائيات تُعرض في الصفحة الرئيسية وصفحة الخدمات معاً. عدّل النص والرقم والأيقونة، أو أضف واحذف كما تريد.</p>
+            <p className="text-white/30 text-xs mb-5">هذه الإحصائيات تُعرض في الصفحة الرئيسية (قسم Hero وقسم من أنا) وصفحة من أنا (About) وصفحة الخدمات. عدّل النص والرقم والأيقونة، أو أضف واحذف كما تريد.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {form.home_stats.map((stat, index) => (

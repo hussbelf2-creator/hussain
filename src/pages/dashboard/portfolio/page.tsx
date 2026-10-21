@@ -36,7 +36,7 @@ const emptyForm: FormData = {
   title: "",
   category: "منتجات",
   type: "صورة",
-  tool: "Midjourney",
+  tool: "",
   image_url: "",
   video_url: "",
   description: "",
@@ -135,11 +135,12 @@ const DashboardPortfolioPage = () => {
 
   const openEditModal = (item: PortfolioItem) => {
     setEditingId(item.id);
+    const tags = item.tags || [];
     setForm({
       title: item.title,
       category: item.category || "",
-      type: "صورة",
-      tool: "Midjourney",
+      type: tags[0] || "صورة",
+      tool: tags[1] || "",
       image_url: item.image_url || "",
       video_url: item.video_url || "",
       description: item.description || "",
@@ -364,9 +365,19 @@ const DashboardPortfolioPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1.5">الأداة</label>
-                  <select value={form.tool} onChange={(e) => setForm({ ...form, tool: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer">
-                    {tools.map((t) => (<option key={t} className="bg-[#0d1b2e]">{t}</option>))}
-                  </select>
+                  <input
+                    type="text"
+                    list="tool-suggestions"
+                    value={form.tool}
+                    onChange={(e) => setForm({ ...form, tool: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500"
+                    placeholder="مثال: Midjourney، Kling، Runway..."
+                  />
+                  <datalist id="tool-suggestions">
+                    {tools.map((t) => (
+                      <option key={t} value={t} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="flex items-end pb-1">
                   <label className="flex items-center gap-2 cursor-pointer">
